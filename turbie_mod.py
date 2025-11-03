@@ -1,3 +1,6 @@
+import numpy as np
+import pandas as pd
+
 def path_corrector(path):
     """
     normalize f_path with "\\"
@@ -62,6 +65,30 @@ def load_turbine_prop(f_path):
 
     return turbie_prop, turbie_prop_unit
 
+def load_CT(f_path):
+    """
+    by call with path (must with double slash), return CT table as a tuples
+    """
+
+    # normalize path first
+    f_path = path_corrector(f_path)
+
+    CT_table = pd.read_csv(f_path,sep='\s+',comment="#",names=["V","CT"])
+    return CT_table
 
 
+def CT_interp(V,CT_table):
+    """
+    Pass wind speed as float, CT_table as DataFrame return interpolation of CT
+    """
+    return np.interp(V,CT_table["V"],CT_table["CT"])
+
+def build_sys_matrices(turbine_p):
+    M = np.array([[ 3*turbine_p["mb"], 0],
+                 [ 0, turbine_p["mn"] + turbine_p["mt"] + turbine_p["mh"]]])
+    C = np.array([[ turbine_p["c1"], -turbine_p["c1"]],
+                  [ -turbine_p["c1"], turbine_p["c1"] + turbine_p["c2"]]])
+    K = np.array([[ turbine_p["k1"], -turbine_p["k1"]],
+                  [ -turbine_p["k1"], turbine_p["k1"] + turbine_p["k2"]]])
+    return M, C, K
 
