@@ -61,7 +61,7 @@ def load_turbine_prop(f_path):
             turbie_prop_unit[key] = unit
 
     return turbie_prop, turbie_prop_unit
+    
+f_path = "C:\DTU_prog\Project02_46W38\inputs\turbie_inputs\turbie_parameters.txt"
 
-
-
-
+print(load_turbine_prop(f_path))
