@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 import pandas as pd
 
 def path_corrector(path):
@@ -76,21 +77,39 @@ def load_CT(f_path):
     CT_table = pd.read_csv(f_path,sep='\s+',comment="#",names=["V","CT"])
     return CT_table
 
+def turbine_area(r):
+    return r**2*np.pi
+
 
 def CT_interp(V,CT_table):
     """
     Pass wind speed as float, CT_table as DataFrame return interpolation of CT
     """
     return np.interp(V,CT_table["V"],CT_table["CT"])
+    # return sp.interpolation.interp1d(CT_table["V"],CT_table["CT"],kind='linear')
 
 def build_sys_matrices(turbine_p):
+    """
+    
+    """
+
+    m1 = 3*turbine_p["mb"]
+    print(3*turbine_p["mb"])
+    print(m1)
+
+    m2 = turbine_p["mn"] + turbine_p["mt"] + turbine_p["mh"]
+    c1, c2 = turbine_p["c1"], turbine_p["c2"]
+    k1, k2 = turbine_p["k1"], turbine_p["k2"]
+
+    
     M = np.array([[ 3*turbine_p["mb"], 0],
-                 [ 0, turbine_p["mn"] + turbine_p["mt"] + turbine_p["mh"]]])
-    C = np.array([[ turbine_p["c1"], -turbine_p["c1"]],
-                  [ -turbine_p["c1"], turbine_p["c1"] + turbine_p["c2"]]])
-    K = np.array([[ turbine_p["k1"], -turbine_p["k1"]],
-                  [ -turbine_p["k1"], turbine_p["k1"] + turbine_p["k2"]]])
+                  [ 0, 3*turbine_p["mb"]]])
+    C = np.array([[ c1, -c1],
+                  [ -c1, c1 + c2]])
+    K = np.array([[ k1, -k1],
+                  [ -k1, k1 + k2]])
     return M, C, K
+
 
 
 f_path = "C:\DTU_prog\Project02_46W38\inputs\turbie_inputs\CT.txt"
@@ -98,9 +117,11 @@ f_path = path_corrector(f_path)
 CT_Table = load_CT(f_path)
 print(CT_Table)
 
-print(CT_interp(10.5,CT_Table))
+
 
 f_path = "C:\DTU_prog\Project02_46W38\inputs\turbie_inputs\turbie_parameters.txt"
 A,B =load_turbine_prop(f_path)
 
 print(build_sys_matrices(A))
+
+print(turbine_area(1))

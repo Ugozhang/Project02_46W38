@@ -1,4 +1,5 @@
 import numpy as np
+import scipy as sp
 import pandas as pd
 
 def path_corrector(path):
@@ -76,19 +77,80 @@ def load_CT(f_path):
     CT_table = pd.read_csv(f_path,sep='\s+',comment="#",names=["V","CT"])
     return CT_table
 
-
 def CT_interp(V,CT_table):
     """
     Pass wind speed as float, CT_table as DataFrame return interpolation of CT
     """
     return np.interp(V,CT_table["V"],CT_table["CT"])
+    # return sp.interpolation.interp1d(CT_table["V"],CT_table["CT"],kind='linear')
 
 def build_sys_matrices(turbine_p):
-    M = np.array([[ 3*turbine_p["mb"], 0],
-                 [ 0, turbine_p["mn"] + turbine_p["mt"] + turbine_p["mh"]]])
-    C = np.array([[ turbine_p["c1"], -turbine_p["c1"]],
-                  [ -turbine_p["c1"], turbine_p["c1"] + turbine_p["c2"]]])
-    K = np.array([[ turbine_p["k1"], -turbine_p["k1"]],
-                  [ -turbine_p["k1"], turbine_p["k1"] + turbine_p["k2"]]])
+    """
+    Build M, C, K matrices by passing turbie parameters
+    """
+    # Assign values
+    m1 = 3*turbine_p["mb"]
+    m2 = turbine_p["mn"] + turbine_p["mt"] + turbine_p["mh"]
+    c1, c2 = turbine_p["c1"], turbine_p["c2"]
+    k1, k2 = turbine_p["k1"], turbine_p["k2"]
+    
+    # Build matrices
+    M = np.array([[ m1, 0],
+                  [ 0, m2]])
+    C = np.array([[ c1, -c1],
+                  [ -c1, c1 + c2]])
+    K = np.array([[ k1, -k1],
+                  [ -k1, k1 + k2]])
+    
     return M, C, K
 
+def f_aero(u,x1_dot,CT):
+    """
+    Compute aerodynamic thrust force on the blades:
+        f_aero = 0.5 * rho * C_T * A * (u - x1_dot)*|u - x1_dot|
+    """
+
+    # parameter calculation
+    A = np.pi * (turbine_p["Dr"]/2)**2
+    rho = turbine_p["rho"]
+
+    return 0.5*rho*CT*A*(u-x1_dot)*abs(u-x1_dot)
+
+def ydot(t, y, M, C, K, u, CT_table, turbine_p):
+    """
+    Compute y'(t) = A*y + B(t) for the 2-DOF Turbie system.
+    """
+    NN = M.shape[0]
+    x1, x2, dx1, dx2 = y
+    y = np.array(y).reshape(-1, 1)  # 轉 column vector
+    Minv = np.linalg.inv(M)
+
+    # flatten f_aero calculation here for easier understanding
+    area = np.pi * (turbine_p["Dr"]/2)**2
+    rho = turbine_p["rho"]
+    u_rel = u - dx1
+    f1_t = 0.5 * rho * CT_interp(u, CT_table) * area * (u_rel) * abs(u_rel)
+    f2_t = 0
+
+    # list forcing vector
+    F  = np.array([[ f1_t],
+                   [ f2_t]])
+
+    # list A, B matrices
+    A = np.block([[ np.zeros((NN,NN)), np.eye(NN)],
+                  [ -(Minv) @ K, -(Minv) @ C]])
+    B = np.block([[ np.zeros((NN,1))],
+                  [ (Minv) @ F]])
+    
+    # list dy/dt = A @ y + B
+    dy = A @ y + B
+    return dy.flatten()
+    
+def mass_spring_dapmer(t,y,M,C,K):
+    """
+    for reference
+    """
+    x, v = y
+    dxdt = v
+    dvdt = - (C/M)*v - (K/M)*x
+    return [dxdt,dvdt]
