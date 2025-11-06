@@ -104,7 +104,7 @@ def build_sys_matrices(turbine_p):
     
     return M, C, K
 
-def f_aero(u,x1_dot,CT):
+def rho_CT_A(u, turbine_p, CT_table):
     """
     Compute aerodynamic thrust force on the blades:
         f_aero = 0.5 * rho * C_T * A * (u - x1_dot)*|u - x1_dot|
@@ -113,10 +113,11 @@ def f_aero(u,x1_dot,CT):
     # parameter calculation
     A = np.pi * (turbine_p["Dr"]/2)**2
     rho = turbine_p["rho"]
+    CT = CT_interp(u, CT_table)
 
-    return 0.5*rho*CT*A*(u-x1_dot)*abs(u-x1_dot)
+    return rho*CT*A
 
-def ydot(t, y, M, C, K, u, CT_table, turbine_p):
+def ydot(t, y, M, C, K, u, rho_CT_A):
     """
     Compute y'(t) = A*y + B(t) for the 2-DOF Turbie system.
     """
@@ -129,7 +130,7 @@ def ydot(t, y, M, C, K, u, CT_table, turbine_p):
     area = np.pi * (turbine_p["Dr"]/2)**2
     rho = turbine_p["rho"]
     u_rel = u - dx1
-    f1_t = 0.5 * rho * CT_interp(u, CT_table) * area * (u_rel) * abs(u_rel)
+    f1_t = 0.5 * rho_CT_A * (u_rel) * abs(u_rel)
     f2_t = 0
 
     # list forcing vector
@@ -145,12 +146,4 @@ def ydot(t, y, M, C, K, u, CT_table, turbine_p):
     # list dy/dt = A @ y + B
     dy = A @ y + B
     return dy.flatten()
-    
-def mass_spring_dapmer(t,y,M,C,K):
-    """
-    for reference
-    """
-    x, v = y
-    dxdt = v
-    dvdt = - (C/M)*v - (K/M)*x
-    return [dxdt,dvdt]
+
