@@ -28,45 +28,50 @@ M, C, K = turbie.build_sys_matrices(turbie_params)
 M, C, K = turbie.build_sys_matrices(turbie_params)
 
 # Read files by dir path
-wind_files_path = main_dir / "inputs" / "wind_files"
-output_root = main_dir / "outputs"
+wind_files_path = main_dir / "inputs" / "wind_files" / "wind_TI_0.1"
+output_root = main_dir / "outputs" / "simulation_y"
 output_root.mkdir(exist_ok=True)
 
 for txt_file in wind_files_path.rglob("wind_*_ms_TI_*.txt"):
     print(f"Simulating：{txt_file.relative_to(main_dir)}")
 
-    # 抓風檔名稱資訊
+    # Catch the file name
     name = txt_file.stem  # e.g. wind_6_ms_TI_0.10
     parts = name.split("_")
     V_nominal = float(parts[1])      # 風速
     TI_val = float(parts[-1])        # TI
 
-    # 讀風檔
-    df = turbie.load_WSdata(txt_file)
+    # Load wind speed data from files
+    # skip transitory part of simulated wind speed files
+    t_trans = 60 # first n seconds
+    df = turbie.load_WSdata(txt_file, t_trans)
     u_func, t_vec, u_vec = turbie.build_ws_func(df)
     t_vec = np.array(t_vec)  # 確保是 numpy
     rho_ct_a = turbie.rho_CT_A(df, turbie_params, CT_table)
 
-    # 初始條件 & 模擬設定
+    # Initialization 初始條件 & 模擬設定
     y0 = np.zeros(4)
     t_span = (t_vec[0], t_vec[-1])
     t_eval = t_vec
 
-    # 數值積分
+    # ODE simulation
     sol = sp.integrate.solve_ivp(turbie.ydot, t_span, y0, t_eval=t_eval, args=(M, C, K, u_func, rho_ct_a))
 
+    # assign value
     t = sol.t
     x1 = sol.y[0]
     x2 = sol.y[1]
+    dx1 = sol.y[2]
+    dx2 = sol.y[3]
 
-    # === 5️⃣ 輸出時間序列 ===
+    # Pass output value into files
     relative_folder = txt_file.parent.relative_to(wind_files_path)
     output_folder = output_root / relative_folder
     output_folder.mkdir(parents=True, exist_ok=True)
     output_file = output_folder / f"response_{name}.txt"
 
-    np.savetxt(output_file, np.column_stack([t, u_vec, x1, x2]),
-               header="time_s wind_ms x1_blade_m x2_tower_m")
+    np.savetxt(output_file, np.column_stack([t, x1, x2, dx1, dx2]),
+               header="t\tx1\tx2\tdx1\tdx2", fmt="%.3f",delimiter="\t" )
     print(f"✅ 已輸出結果：{output_file.relative_to(main_dir)}")
 
 """

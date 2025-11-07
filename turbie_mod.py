@@ -78,7 +78,7 @@ def load_CT(f_path):
     CT_table = pd.read_csv(f_path,sep='\s+',comment="#",names=["V","CT"])
     return CT_table
 
-def load_WSdata(f_path):
+def load_WSdata(f_path, skip_first_n_secs=None):
     """
     by call with path (must with double slash), return CT table as a tuples
     """
@@ -87,7 +87,8 @@ def load_WSdata(f_path):
     # f_path = path_corrector(f_path)
 
     df = pd.read_csv(f_path,sep='\s+')
-    return df
+    df_t = df[df["Time(s)"] >= 60]
+    return df_t
 
 def rho_CT_A(df, turbine_p, CT_table):
     """
