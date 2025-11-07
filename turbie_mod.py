@@ -41,7 +41,7 @@ def load_turbine_prop(f_path):
     by call with path (must with double slash), return propertis as 2 dicts with value and unit
     """
     # normalize path first
-    f_path = path_corrector(f_path)
+    # f_path = path_corrector(f_path)
 
     # value and unit dicts
     turbie_prop = {}
@@ -73,7 +73,7 @@ def load_CT(f_path):
     """
 
     # normalize path first
-    f_path = path_corrector(f_path)
+    # f_path = path_corrector(f_path)
 
     CT_table = pd.read_csv(f_path,sep='\s+',comment="#",names=["V","CT"])
     return CT_table
@@ -124,8 +124,8 @@ def build_sys_matrices(turbine_p):
 
 def build_ws_func(df):
     
-    u= df["V(m/s)"]
-    t= df["Time(s)"]
+    u= df["V(m/s)"].to_numpy()
+    t= df["Time(s)"].to_numpy()
 
     def u_of_t(t_query):
         return np.interp(t_query, df["Time(s)"], df["V(m/s)"])
@@ -141,8 +141,6 @@ def ydot(t, y, M, C, K, u_of_t, rho_CT_A):
     Minv = np.linalg.inv(M)
 
     # flatten f_aero calculation here for easier understanding
-    area = np.pi * (turbine_p["Dr"]/2)**2
-    rho = turbine_p["rho"]
     u = u_of_t(t)
     u_rel = u - dx1
     f1_t = 0.5 * rho_CT_A * (u_rel) * abs(u_rel)

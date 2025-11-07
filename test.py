@@ -141,8 +141,6 @@ def ydot(t, y, M, C, K, u_of_t, rho_CT_A):
     Minv = np.linalg.inv(M)
 
     # flatten f_aero calculation here for easier understanding
-    area = np.pi * (turbine_p["Dr"]/2)**2
-    rho = turbine_p["rho"]
     u = u_of_t(t)
     u_rel = u - dx1
     f1_t = 0.5 * rho_CT_A * (u_rel) * abs(u_rel)
