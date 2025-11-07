@@ -84,7 +84,7 @@ def load_WSdata(f_path):
     """
 
     # normalize path first
-    f_path = path_corrector(f_path)
+    # f_path = path_corrector(f_path)
 
     df = pd.read_csv(f_path,sep='\s+')
     return df
