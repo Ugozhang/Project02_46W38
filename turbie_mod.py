@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 import pandas as pd
+import matplotlib.pyplot as plt
 
 def path_corrector(path):
     """
@@ -77,12 +78,29 @@ def load_CT(f_path):
     CT_table = pd.read_csv(f_path,sep='\s+',comment="#",names=["V","CT"])
     return CT_table
 
-def CT_interp(V,CT_table):
+def load_WSdata(f_path):
     """
-    Pass wind speed as float, CT_table as DataFrame return interpolation of CT
+    by call with path (must with double slash), return CT table as a tuples
     """
-    return np.interp(V,CT_table["V"],CT_table["CT"])
-    # return sp.interpolation.interp1d(CT_table["V"],CT_table["CT"],kind='linear')
+
+    # normalize path first
+    f_path = path_corrector(f_path)
+
+    df = pd.read_csv(f_path,sep='\s+')
+    return df
+
+def rho_CT_A(df, turbine_p, CT_table):
+    """
+    Compute the constant part of aerodynamic force equation:
+        rho * C_T * A
+    """
+
+    # parameter calculation
+    A = np.pi * (turbine_p["Dr"]/2)**2
+    rho = turbine_p["rho"]
+    CT = np.interp(df["V(m/s)"].mean(),CT_table["V"],CT_table["CT"])
+    
+    return rho*CT*A
 
 def build_sys_matrices(turbine_p):
     """
@@ -104,20 +122,16 @@ def build_sys_matrices(turbine_p):
     
     return M, C, K
 
-def rho_CT_A(u, turbine_p, CT_table):
-    """
-    Compute aerodynamic thrust force on the blades:
-        f_aero = 0.5 * rho * C_T * A * (u - x1_dot)*|u - x1_dot|
-    """
+def build_ws_func(df):
+    
+    u= df["V(m/s)"]
+    t= df["Time(s)"]
 
-    # parameter calculation
-    A = np.pi * (turbine_p["Dr"]/2)**2
-    rho = turbine_p["rho"]
-    CT = CT_interp(u, CT_table)
+    def u_of_t(t_query):
+        return np.interp(t_query, df["Time(s)"], df["V(m/s)"])
+    return u_of_t, t, u
 
-    return rho*CT*A
-
-def ydot(t, y, M, C, K, u, rho_CT_A):
+def ydot(t, y, M, C, K, u_of_t, rho_CT_A):
     """
     Compute y'(t) = A*y + B(t) for the 2-DOF Turbie system.
     """
@@ -129,6 +143,7 @@ def ydot(t, y, M, C, K, u, rho_CT_A):
     # flatten f_aero calculation here for easier understanding
     area = np.pi * (turbine_p["Dr"]/2)**2
     rho = turbine_p["rho"]
+    u = u_of_t(t)
     u_rel = u - dx1
     f1_t = 0.5 * rho_CT_A * (u_rel) * abs(u_rel)
     f2_t = 0
