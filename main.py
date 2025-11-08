@@ -28,9 +28,12 @@ M, C, K = turbie.build_sys_matrices(turbie_params)
 M, C, K = turbie.build_sys_matrices(turbie_params)
 
 # Read files by dir path
-wind_files_path = main_dir / "inputs" / "wind_files" / "wind_TI_0.1"
+wind_files_path = main_dir / "inputs" / "wind_files" / "wind_TI_test_0.1"
 output_root = main_dir / "outputs" / "simulation_y"
 output_root.mkdir(exist_ok=True)
+
+# initialize statistical summary
+df_statistic = pd.DataFrame(columns=["TI-ws_category","TI","U_mean","x1_mean","x1_std","x2_mean","x2_std"])
 
 for txt_file in wind_files_path.rglob("wind_*_ms_TI_*.txt"):
     print(f"Simulating：{txt_file.relative_to(main_dir)}")
@@ -74,6 +77,51 @@ for txt_file in wind_files_path.rglob("wind_*_ms_TI_*.txt"):
                header="t\tx1\tx2\tdx1\tdx2", fmt="%.3f",delimiter="\t" )
     print(f"✅ 已輸出結果：{output_file.relative_to(main_dir)}")
 
+    # save the mean, std values, etc.
+    df_statistic = pd.concat([df_statistic, pd.DataFrame([{"TI-ws_category":name,
+                                                            "TI":TI_val,
+                                                            "U_mean":df["V(m/s)"].mean(),
+                                                            "x1_mean":x1.mean(),
+                                                            "x1_std":x1.std(),
+                                                            "x2_mean":x2.mean(),
+                                                            "x2_std":x2.std()}])]) 
+
+    plt.figure(figsize=(8,5))
+    plt.subplot(3,1,1)
+    plt.plot(t, u_vec)
+    plt.ylabel("Wind [m/s]")
+    plt.title(name)
+    plt.subplot(3,1,2)
+    plt.plot(t, x1, label="Blade")
+    plt.ylabel("x1 [m]")
+    plt.subplot(3,1,3)
+    plt.plot(t, x2, label="Tower", color='orange')
+    plt.ylabel("x2 [m]")
+    plt.xlabel("Time [s]")
+    plt.tight_layout()
+    plt.savefig(output_folder / f"time_series_{name}.png", dpi=200)
+    plt.close()
+
+    fig, ax1 = plt.subplots(figsize=(8, 5))
+    ax1.plot(t, x1, label="Blade Deflec. (x1)", color="tab:cyan")
+    ax1.plot(t, x2, label="Tower Deflec. (x2)", color="tab:blue")
+    ax1.set_xlabel("Time [s]")
+    ax1.set_ylabel("Displacement [m]")
+    ax1.legend(loc="upper left")
+
+    ax2 = ax1.twinx()
+    ax2.plot(t, u_vec, label="Wind (u)", color="tab:red", alpha=0.5)
+    ax2.set_ylabel("Wind [m/s]", color="tab:red")
+    ax2.tick_params(axis="y", labelcolor="tab:red")
+    ax2.legend(loc="upper right")
+
+    plt.title(name)
+    plt.tight_layout()
+    plt.savefig(output_folder / f"time_series_{name}.png", dpi=200)
+    plt.close()
+                                           
+    
+print(df_statistic)
 """
 rho_CT_A = turbie.rho_CT_A(df, turbie_params, CT_table)
 M, C, K = turbie.build_sys_matrices(turbie_params)
