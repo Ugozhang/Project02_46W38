@@ -2,6 +2,7 @@ import numpy as np
 import scipy as sp
 import pandas as pd
 import matplotlib.pyplot as plt
+from pathlib import Path
 
 def path_corrector(path):
     """
@@ -69,6 +70,7 @@ def load_turbine_prop(f_path):
 
 def load_CT(f_path):
     """
+def load_WSdata(f_path, skip_first_n_secs=None):
     by call with path (must with double slash), return CT table as a tuples
     """
 
@@ -160,4 +162,27 @@ def ydot(t, y, M, C, K, u_of_t, rho_CT_A):
     # list dy/dt = A @ y + B
     dy = A @ y + B
     return dy.flatten()
+
+
+def DrawPlot_Deflec_t(t, x1, x2, u_vec):
+    """
+    Give time, blade, tower deflection datasets and windspeed set; draw and return figure and axese objects.
+    """
+
+    # plot x1, x2 - t
+    fig, ax1 = plt.subplots(figsize=(8, 5))
+    ax1.plot(t, x1, label="Blade Deflec. (x1)", color="tab:cyan")
+    ax1.plot(t, x2, label="Tower Deflec. (x2)", color="tab:blue")
+    ax1.set_xlabel("Time [s]")
+    ax1.set_ylabel("Displacement [m]")
+    ax1.legend(loc="upper left")
+
+    # plot u - t as right side y axis
+    ax2 = ax1.twinx()
+    ax2.plot(t, u_vec, label="Wind (u)", color="tab:red", alpha=0.5)
+    ax2.set_ylabel("Wind [m/s]", color="tab:red")
+    ax2.tick_params(axis="y", labelcolor="tab:red")
+    ax2.legend(loc="upper right")
+
+    return fig, ax1, ax2
 

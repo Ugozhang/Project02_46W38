@@ -11,37 +11,34 @@ import scipy as sp
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# CT_table_path = ".\inputs\turbie_inputs\CT.txt"
+# load CT.txt
 CT_table_path = main_dir / "inputs" / "turbie_inputs" / "CT.txt"
 CT_table = turbie.load_CT(CT_table_path)
 
-# turbie_params_path = ".\inputs\turbie_inputs\turbie_parameters.txt"
+# load turbie_parameters.txt and calculate M, C, K matrices
 turbie_params_path = main_dir / "inputs" / "turbie_inputs" / "turbie_parameters.txt"
 turbie_params, trbie_units = turbie.load_turbine_prop(turbie_params_path)
 M, C, K = turbie.build_sys_matrices(turbie_params)
 
-# one file for test
-#wind_files_path = ".\inputs\wind_files\wind_TI_0.1\wind_5_ms_TI_0.1.txt"
-#df = turbie.load_WSdata(wind_files_path)
-#outputs_path = ""
+# Assign wind files path
+#wind_files_path = main_dir / "inputs" / "wind_files" / "wind_TI_test_0.1"
+wind_files_path = main_dir / "inputs" / "wind_files"
 
-M, C, K = turbie.build_sys_matrices(turbie_params)
-
-# Read files by dir path
-wind_files_path = main_dir / "inputs" / "wind_files" / "wind_TI_test_0.1"
-output_root = main_dir / "outputs" / "simulation_y"
+# Assign output root path
+output_root = main_dir / "outputs"
 output_root.mkdir(exist_ok=True)
 
-# initialize statistical summary
-df_statistic = pd.DataFrame(columns=["TI-ws_category","TI","U_mean","x1_mean","x1_std","x2_mean","x2_std"])
+# initialize statistical summary dict list (updated from pd.df for efficiency)
+df_statistic_rows = []
 
+# load wind files and simulate
 for txt_file in wind_files_path.rglob("wind_*_ms_TI_*.txt"):
     print(f"Simulating：{txt_file.relative_to(main_dir)}")
 
     # Catch the file name
     name = txt_file.stem  # e.g. wind_6_ms_TI_0.10
     parts = name.split("_")
-    V_nominal = float(parts[1])      # 風速
+    V_nominal = float(parts[1])      # ws 
     TI_val = float(parts[-1])        # TI
 
     # Load wind speed data from files
@@ -67,7 +64,7 @@ for txt_file in wind_files_path.rglob("wind_*_ms_TI_*.txt"):
     dx1 = sol.y[2]
     dx2 = sol.y[3]
 
-    # Pass output value into files
+    ## Pass output value into files
     relative_folder = txt_file.parent.relative_to(wind_files_path)
     output_folder = output_root / relative_folder
     output_folder.mkdir(parents=True, exist_ok=True)
@@ -75,53 +72,38 @@ for txt_file in wind_files_path.rglob("wind_*_ms_TI_*.txt"):
 
     np.savetxt(output_file, np.column_stack([t, x1, x2, dx1, dx2]),
                header="t\tx1\tx2\tdx1\tdx2", fmt="%.3f",delimiter="\t" )
-    print(f"✅ 已輸出結果：{output_file.relative_to(main_dir)}")
-
-    # save the mean, std values, etc.
-    df_statistic = pd.concat([df_statistic, pd.DataFrame([{"TI-ws_category":name,
-                                                            "TI":TI_val,
-                                                            "U_mean":df["V(m/s)"].mean(),
-                                                            "x1_mean":x1.mean(),
-                                                            "x1_std":x1.std(),
-                                                            "x2_mean":x2.mean(),
-                                                            "x2_std":x2.std()}])]) 
-
-    plt.figure(figsize=(8,5))
-    plt.subplot(3,1,1)
-    plt.plot(t, u_vec)
-    plt.ylabel("Wind [m/s]")
-    plt.title(name)
-    plt.subplot(3,1,2)
-    plt.plot(t, x1, label="Blade")
-    plt.ylabel("x1 [m]")
-    plt.subplot(3,1,3)
-    plt.plot(t, x2, label="Tower", color='orange')
-    plt.ylabel("x2 [m]")
-    plt.xlabel("Time [s]")
-    plt.tight_layout()
-    plt.savefig(output_folder / f"time_series_{name}.png", dpi=200)
-    plt.close()
-
-    fig, ax1 = plt.subplots(figsize=(8, 5))
-    ax1.plot(t, x1, label="Blade Deflec. (x1)", color="tab:cyan")
-    ax1.plot(t, x2, label="Tower Deflec. (x2)", color="tab:blue")
-    ax1.set_xlabel("Time [s]")
-    ax1.set_ylabel("Displacement [m]")
-    ax1.legend(loc="upper left")
-
-    ax2 = ax1.twinx()
-    ax2.plot(t, u_vec, label="Wind (u)", color="tab:red", alpha=0.5)
-    ax2.set_ylabel("Wind [m/s]", color="tab:red")
-    ax2.tick_params(axis="y", labelcolor="tab:red")
-    ax2.legend(loc="upper right")
-
-    plt.title(name)
-    plt.tight_layout()
-    plt.savefig(output_folder / f"time_series_{name}.png", dpi=200)
-    plt.close()
-                                           
+    print(f"Results exported：{output_file.relative_to(main_dir)}")
     
-print(df_statistic)
+    ## save the mean, std values, etc. into statistical summary list
+    df_statistic_rows.append({
+        "TI-ws_category":name,
+        "TI":TI_val,
+        "U_mean":df["V(m/s)"].mean(),
+        "x1_mean":x1.mean(),
+        "x1_std":x1.std(),
+        "x2_mean":x2.mean(),
+        "x2_std":x2.std()}) 
+
+    ## Plot deflection
+    # set the plots output path
+    output_deflec_plots = output_root / "Deflection_Plots" / relative_folder
+    output_deflec_plots.mkdir(exist_ok=True)
+    # call function to plot x1, x2, u_vec over t
+    fig, ax1, ax2 = turbie.DrawPlot_Deflec_t(t,x1,x2,u_vec)
+    # set title and 
+    plt.title(name)
+    plt.tight_layout()
+    plt.savefig(output_deflec_plots / f"Deflection_{name}.png", dpi=600)
+    plt.close()
+
+# transfer statistic list to pd.dataframe
+df_statistic = pd.DataFrame(df_statistic_rows)
+# Save 
+output_stat = output_root / "Statistic_summary.txt"
+# np.savetxt(output_root / "Statistic_summary.txt", df_statistic, fmt="%.3f",delimiter="\t")
+df_statistic.to_csv(output_root / "Statistic_summary.txt", sep="\t", index=False, float_format="%.3f")
+    
+
 """
 rho_CT_A = turbie.rho_CT_A(df, turbie_params, CT_table)
 M, C, K = turbie.build_sys_matrices(turbie_params)
