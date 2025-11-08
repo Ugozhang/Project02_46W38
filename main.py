@@ -29,79 +29,97 @@ output_root = main_dir / "outputs"
 output_root.mkdir(exist_ok=True)
 
 # initialize statistical summary dict list (updated from pd.df for efficiency)
-df_statistic_rows = []
+all_rows = []
 
 # load wind files and simulate
-for txt_file in wind_files_path.rglob("wind_*_ms_TI_*.txt"):
-    print(f"Simulating：{txt_file.relative_to(main_dir)}")
 
-    # Catch the file name
-    name = txt_file.stem  # e.g. wind_6_ms_TI_0.10
-    parts = name.split("_")
-    V_nominal = float(parts[1])      # ws 
-    TI_val = float(parts[-1])        # TI
-
-    # Load wind speed data from files
-    # skip transitory part of simulated wind speed files
-    t_trans = 60 # first n seconds
-    df = turbie.load_WSdata(txt_file, t_trans)
-    u_func, t_vec, u_vec = turbie.build_ws_func(df)
-    t_vec = np.array(t_vec)  # 確保是 numpy
-    rho_ct_a = turbie.rho_CT_A(df, turbie_params, CT_table)
-
-    # Initialization 初始條件 & 模擬設定
-    y0 = np.zeros(4)
-    t_span = (t_vec[0], t_vec[-1])
-    t_eval = t_vec
-
-    # ODE simulation
-    sol = sp.integrate.solve_ivp(turbie.ydot, t_span, y0, t_eval=t_eval, args=(M, C, K, u_func, rho_ct_a))
-
-    # assign value
-    t = sol.t
-    x1 = sol.y[0]
-    x2 = sol.y[1]
-    dx1 = sol.y[2]
-    dx2 = sol.y[3]
-
-    ## Pass output value into files
-    relative_folder = txt_file.parent.relative_to(wind_files_path)
-    output_folder = output_root / relative_folder
-    output_folder.mkdir(parents=True, exist_ok=True)
-    output_file = output_folder / f"response_{name}.txt"
-
-    np.savetxt(output_file, np.column_stack([t, x1, x2, dx1, dx2]),
-               header="t\tx1\tx2\tdx1\tdx2", fmt="%.3f",delimiter="\t" )
-    print(f"Results exported：{output_file.relative_to(main_dir)}")
+for subfolder in wind_files_path.iterdir():
     
-    ## save the mean, std values, etc. into statistical summary list
-    df_statistic_rows.append({
-        "TI-ws_category":name,
-        "TI":TI_val,
-        "U_mean":df["V(m/s)"].mean(),
-        "x1_mean":x1.mean(),
-        "x1_std":x1.std(),
-        "x2_mean":x2.mean(),
-        "x2_std":x2.std()}) 
+    if subfolder.is_dir():
+        # reseting df_statistic_rows
+        df_statistic_rows = []
 
-    ## Plot deflection
-    # set the plots output path
-    output_deflec_plots = output_root / "Deflection_Plots" / relative_folder
-    output_deflec_plots.mkdir(exist_ok=True)
-    # call function to plot x1, x2, u_vec over t
-    fig, ax1, ax2 = turbie.DrawPlot_Deflec_t(t,x1,x2,u_vec)
-    # set title and 
-    plt.title(name)
-    plt.tight_layout()
-    plt.savefig(output_deflec_plots / f"Deflection_{name}.png", dpi=600)
-    plt.close()
+        for txt_file in subfolder.glob("wind_*_ms_TI_*.txt"):
+            print(f"Simulating：{txt_file.name}")
+
+            # Catch the file name
+            name = txt_file.stem  # e.g. wind_6_ms_TI_0.10
+            parts = name.split("_")
+            V_nominal = float(parts[1])      # ws 
+            TI_val = float(parts[-1])        # TI
+
+            # Load wind speed data from files
+            # skip transitory part of simulated wind speed files
+            t_trans = 60 # first n seconds
+            df = turbie.load_WSdata(txt_file, t_trans)
+            u_func, t_vec, u_vec = turbie.build_ws_func(df)
+            t_vec = np.array(t_vec)  # 確保是 numpy
+            rho_ct_a = turbie.rho_CT_A(df, turbie_params, CT_table)
+
+            # Initialization 初始條件 & 模擬設定
+            y0 = np.zeros(4)
+            t_span = (t_vec[0], t_vec[-1])
+            t_eval = t_vec
+
+            # ODE simulation
+            sol = sp.integrate.solve_ivp(turbie.ydot, t_span, y0, t_eval=t_eval, args=(M, C, K, u_func, rho_ct_a))
+
+            # assign value
+            t = sol.t
+            x1 = sol.y[0]
+            x2 = sol.y[1]
+            dx1 = sol.y[2]
+            dx2 = sol.y[3]
+
+            ## Pass output value into files
+            relative_folder = subfolder.parent.relative_to(wind_files_path)
+            #output_folder = output_root / relative_folder
+            output_folder = output_root / subfolder.name
+            output_folder.mkdir(parents=True, exist_ok=True)
+            output_file = output_folder / f"response_{name}.txt"
+
+            np.savetxt(output_file, np.column_stack([t, x1, x2, dx1, dx2]),
+                    header="t\tx1\tx2\tdx1\tdx2", fmt="%.3f",delimiter="\t" )
+            
+            ## save the mean, std values, etc. into statistical summary list
+            df_statistic_rows.append({
+                "TI-ws_category":name,
+                "TI":TI_val,
+                "U_mean":df["V(m/s)"].mean(),
+                "x1_mean":x1.mean(),
+                "x1_std":x1.std(),
+                "x2_mean":x2.mean(),
+                "x2_std":x2.std()}) 
+
+            ## Plot deflection
+            # set the plots output path
+            #output_deflec_plots = output_root / "Deflection_Plots" / relative_folder
+            output_deflec_plots = output_root / "Deflection_Plots" / subfolder.name
+            output_deflec_plots.mkdir(exist_ok=True)
+            # call function to plot x1, x2, u_vec over t
+            fig, ax1, ax2 = turbie.DrawPlot_Deflec_t(t,x1,x2,u_vec)
+            # set title and 
+            plt.title(name)
+            plt.tight_layout()
+            plt.savefig(output_deflec_plots / f"Deflection_{name}.png", dpi=600)
+            plt.close()
+
+            print(f"Results exported：{output_file.relative_to(main_dir)}")
+        
+        if df_statistic_rows:
+            # transfer statistic list to pd.dataframe
+            df_statistic = pd.DataFrame(df_statistic_rows)
+            # Save under subfolder
+            df_statistic.to_csv(output_root / subfolder.name / "Statistic_summary.txt", sep="\t", index=False, float_format="%.3f")
+
+            # 
+            all_rows.extend(df_statistic_rows)
+
 
 # transfer statistic list to pd.dataframe
-df_statistic = pd.DataFrame(df_statistic_rows)
+df_all_statistic = pd.DataFrame(all_rows)
 # Save 
-output_stat = output_root / "Statistic_summary.txt"
-# np.savetxt(output_root / "Statistic_summary.txt", df_statistic, fmt="%.3f",delimiter="\t")
-df_statistic.to_csv(output_root / "Statistic_summary.txt", sep="\t", index=False, float_format="%.3f")
+df_all_statistic.to_csv(output_root / "Statistic_summary_all.txt", sep="\t", index=False, float_format="%.3f")
     
 
 """
