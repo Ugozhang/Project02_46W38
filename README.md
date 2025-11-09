@@ -21,7 +21,8 @@ Looking at the CT table, the CT value remains nearly constant between 8 m/s and 
 The smooth transition helps avoid power spikes, torque oscillations, or abrupt pitch changes that could stress the drivetrain.  
   
 Between 4 m/s and 8 m/s, the turbine operates with a high thrust coefficient, extracting as much energy as possible from the wind — this is the power-optimization region.
-
+  
+Result comparison figure over same ws x-axis (CT-V, mean displacement, stdev):
 <img src="outputs/Statistic_Plots/Displacement_vs_WS_allTI_subplots.png" width="600">
 
 
