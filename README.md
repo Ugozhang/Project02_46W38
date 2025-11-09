@@ -7,13 +7,13 @@ Turbie was simulated under multiple wind speeds and turbulence intensities (TI) 
 For each case, the blade and tower displacements were computed by integrating the 2DOF mass–spring–damper system.  
 Mean and standard deviation values were obtained after removing the initial transient period (first 60 s).  
   
-# Results  
+**Results**  
 The results show mean deflections of both the blades and tower increase with wind speed between 4-11 m/s and decrease between 11-25 m/s.  
 The mean deflections remain similar across different turbulence intensities (TI), indicating that TI has little effect on the average structural displacement.  
 In contrast, the standard deviation increases significantly with higher TI values, showing a wider range of instantaneous motion under more turbulent conditions.  
 This suggests that turbulence mainly influences short-term fluctuations in deflection, while the mean displacement is governed primarily by the steady aerodynamic load associated with the mean wind speed.  
   
-# Discussion  
+**Discussion**  
 When checking the relation between CT and the displacement results above 11 m/s, the same pattern is observed — the displacement is proportional to the CT value. This indicates that the rated wind speed of the turbine is around 11 m/s.
 Beyond this point, the turbine begins shedding aerodynamic loads at rated power by adjusting the blade pitch angle, which is part of the power-limiting control strategy. 
    
