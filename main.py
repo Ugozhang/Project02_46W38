@@ -11,9 +11,22 @@ import scipy as sp
 import pandas as pd
 import matplotlib.pyplot as plt
 
+# Assign output root path
+output_root = main_dir / "outputs"
+output_root.mkdir(exist_ok=True)
+
 # load CT.txt
 CT_table_path = main_dir / "inputs" / "turbie_inputs" / "CT.txt"
 CT_table = turbie.load_CT(CT_table_path)
+
+# Plot CT-V table for Discussion 
+fig, ax1 = plt.subplots(figsize=(8,5))
+ax1.plot(CT_table["V"],CT_table["CT"], label="CT_curve")
+ax1.set_xlabel("V (m/s)")
+ax1.set_ylabel("CT")
+ax1.set_title("CT-V relation")
+fig.tight_layout()
+fig.savefig(output_root / f"CT-V.png",dpi=300)
 
 # load turbie_parameters.txt and calculate M, C, K matrices
 turbie_params_path = main_dir / "inputs" / "turbie_inputs" / "turbie_parameters.txt"
@@ -22,10 +35,6 @@ M, C, K = turbie.build_sys_matrices(turbie_params)
 
 # Assign wind files path
 wind_files_path = main_dir / "inputs" / "wind_files"
-
-# Assign output root path
-output_root = main_dir / "outputs"
-output_root.mkdir(exist_ok=True)
 
 # initialize statistical summary dict list (updated from pd.df for efficiency)
 all_rows = []
