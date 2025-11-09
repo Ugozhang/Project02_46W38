@@ -186,3 +186,73 @@ def DrawPlot_Deflec_t(t, x1, x2, u_vec):
 
     return fig, ax1, ax2
 
+def plot_each_TI(df_all_statistic, TI_categories, plot_dir):
+    """
+    Scanning each TI_categories by loop, assign sorted data into subset. 
+    Plot each subset; then, save the figures
+    """
+    for TI_val in TI_categories:
+        subset = df_all_statistic[df_all_statistic["TI"] == TI_val].sort_values("U_mean")
+
+        # --- Plot means ---
+        fig, ax1 = plt.subplots(figsize=(7, 5))
+        ax1.plot(subset["U_mean"], subset["x1_mean"], "o-", label="Blade mean (x1)")
+        ax1.plot(subset["U_mean"], subset["x2_mean"], "s--", label="Tower mean (x2)")
+        ax1.set_xlabel("Mean Wind Speed [m/s]")
+        ax1.set_ylabel("Mean Deflection [m]")
+        ax1.set_title(f"Mean Displacements vs Wind Speed (TI = {TI_val:.2f})")
+        ax1.legend()
+        ax1.grid(True)
+        fig.tight_layout()
+        fig.savefig(plot_dir / f"Mean_vs_WS_TI_{TI_val:.2f}.png", dpi=300)
+
+        # --- Plot standard deviations ---
+        fig, ax2 = plt.subplots(figsize=(7, 5))
+        ax2.plot(subset["U_mean"], subset["x1_std"], "o-", label="Blade std (x1)")
+        ax2.plot(subset["U_mean"], subset["x2_std"], "s--", label="Tower std (x2)")
+        ax2.set_xlabel("Mean Wind Speed [m/s]")
+        ax2.set_ylabel("Standard Deviation [m]")
+        ax2.set_title(f"Std. Deviation vs Wind Speed (TI = {TI_val:.2f})")
+        ax2.legend()
+        ax2.grid(True)
+        fig.tight_layout()
+        fig.savefig(plot_dir / f"Std_vs_WS_TI_{TI_val:.2f}.png", dpi=300)
+
+        plt.close("all")
+        print(f"✅ Plots saved for TI={TI_val:.2f}")
+
+def plot_all_TI(df_all_statistic, TI_categories, colors, plot_dir):
+    """
+    Scanning each TI_categories by loop, assign sorted data into subset. 
+    Plot each subset onto axis objects in loop; then, set figure object after all subsets were plotting onto axis.
+    """
+    # Create fig with 2 subplots
+    fig, (ax_mean, ax_std) = plt.subplots(2, 1, figsize=(7, 8), sharex=True)
+
+    for TI_val, color in zip(TI_categories, colors):
+        subset = df_all_statistic[df_all_statistic["TI"] == TI_val].sort_values("U_mean")
+
+        # --- Plot means ---
+        ax_mean.plot(subset["U_mean"], subset["x1_mean"], "o-", color = color, label=f"TI={TI_val}_Blade(x1)_mean")
+        ax_mean.plot(subset["U_mean"], subset["x2_mean"], "s--", color = color, label=f"TI={TI_val}_Tower(x2)_mean")
+        
+        # --- Plot standard deviations ---
+        ax_std.plot(subset["U_mean"], subset["x1_std"], "o-", color = color, alpha = 0.7, label=f"TI={TI_val}_Blade(x1)_std")
+        ax_std.plot(subset["U_mean"], subset["x2_std"], "s--", color = color, alpha = 0.7, label=f"TI={TI_val}_Tower(x2)_std")
+        
+    ax_mean.set_ylabel("Mean Deflection [m]")
+    ax_mean.set_title("Blade & Tower Displacements vs Wind Speed (All TI)")
+    ax_mean.grid(True)
+    ax_mean.legend(ncol=2, fontsize=8)
+
+    ax_std.set_xlabel("Mean Wind Speed [m/s]")
+    ax_std.set_ylabel("Standard Deviation [m]")
+    ax_std.grid(True)
+    ax_std.legend(ncol=2, fontsize=8)
+
+    # ax1.set_title(f"Mean Displacements vs Wind Speed (TI = {TI_val:.2f})")
+    fig.tight_layout()
+    fig.savefig(plot_dir / f"Displacement_vs_WS_allTI_subplots.png", dpi=300)
+
+    plt.close("all")
+    print(f"✅ Combined subplot figure saved: Mean + Std for all TI.")

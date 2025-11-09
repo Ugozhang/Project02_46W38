@@ -21,7 +21,6 @@ turbie_params, trbie_units = turbie.load_turbine_prop(turbie_params_path)
 M, C, K = turbie.build_sys_matrices(turbie_params)
 
 # Assign wind files path
-#wind_files_path = main_dir / "inputs" / "wind_files" / "wind_TI_test_0.1"
 wind_files_path = main_dir / "inputs" / "wind_files"
 
 # Assign output root path
@@ -32,13 +31,14 @@ output_root.mkdir(exist_ok=True)
 all_rows = []
 
 # load wind files and simulate
-
 for subfolder in wind_files_path.iterdir():
     
+    # detect subfolders
     if subfolder.is_dir():
         # reseting df_statistic_rows
         df_statistic_rows = []
 
+        # read each files under subfolders
         for txt_file in subfolder.glob("wind_*_ms_TI_*.txt"):
             print(f"Simulating：{txt_file.name}")
 
@@ -115,79 +115,24 @@ for subfolder in wind_files_path.iterdir():
             # add local to one file of all cate.
             all_rows.extend(df_statistic_rows)
 
-
 # transfer statistic list to pd.dataframe
 df_all_statistic = pd.DataFrame(all_rows)
 # Save 
 df_all_statistic.to_csv(output_root / "Statistic_summary_all.txt", sep="\t", index=False, float_format="%.3f")
 
-
-#df_T005 = df_all_statistic[df_all_statistic["TI"] == 0.05]
-#df_T01 = df_all_statistic[df_all_statistic["TI"] == 0.1]
-#df_T015 = df_all_statistic[df_all_statistic["TI"] == 0.15]
-
+## Plotting the statistic plots
+# get the unique list of TI_categories
 TI_categories = sorted(df_all_statistic["TI"].unique())
+# set stat plot output path
 plot_dir = output_root / "Statistic_Plots"
 plot_dir.mkdir(exist_ok=True)
 
-for TI_val in TI_categories:
-    subset = df_all_statistic[df_all_statistic["TI"] == TI_val].sort_values("U_mean")
+# Automatic dispatch color for recognization in combined figure
+cmap = plt.cm.plasma
+colors = cmap(np.linspace(0.15, 0.85, len(TI_categories)))
 
-    # --- Plot means ---
-    fig, ax1 = plt.subplots(figsize=(7, 5))
-    ax1.plot(subset["U_mean"], subset["x1_mean"], "o-", label="Blade mean (x1)")
-    ax1.plot(subset["U_mean"], subset["x2_mean"], "s--", label="Tower mean (x2)")
-    ax1.set_xlabel("Mean Wind Speed [m/s]")
-    ax1.set_ylabel("Mean Deflection [m]")
-    ax1.set_title(f"Mean Displacements vs Wind Speed (TI = {TI_val:.2f})")
-    ax1.legend()
-    ax1.grid(True)
-    fig.tight_layout()
-    fig.savefig(plot_dir / f"Mean_vs_WS_TI_{TI_val:.2f}.png", dpi=300)
+# passing statistic df, TI_cate and plot output path for plotting
+turbie.plot_each_TI(df_all_statistic, TI_categories, plot_dir)
 
-    # --- Plot standard deviations ---
-    fig, ax2 = plt.subplots(figsize=(7, 5))
-    ax2.plot(subset["U_mean"], subset["x1_std"], "o-", label="Blade std (x1)")
-    ax2.plot(subset["U_mean"], subset["x2_std"], "s--", label="Tower std (x2)")
-    ax2.set_xlabel("Mean Wind Speed [m/s]")
-    ax2.set_ylabel("Standard Deviation [m]")
-    ax2.set_title(f"Std. Deviation vs Wind Speed (TI = {TI_val:.2f})")
-    ax2.legend()
-    ax2.grid(True)
-    fig.tight_layout()
-    fig.savefig(plot_dir / f"Std_vs_WS_TI_{TI_val:.2f}.png", dpi=300)
-
-    plt.close("all")
-    print(f"✅ Plots saved for TI={TI_val:.2f}")
-#fig, ax1 = plt.subplots(8,5)
-#ax1.plot(df_T005["U_mean"],df_T005["x1_mean"]))
-    
-
-"""
-rho_CT_A = turbie.rho_CT_A(df, turbie_params, CT_table)
-M, C, K = turbie.build_sys_matrices(turbie_params)
-u_of_t, t_vec, u_vec = turbie.build_ws_func(df)
-
-# --- 模擬設定 ---
-u = df["V(m/s)"]          # 風速 m/s
-y0 = [0, 0, 0, 0]  # 初始位移與速度
-t_span = (t_vec[0], t_vec[-1])   # 模擬 30 秒
-t_eval = t_vec
-# --- 模擬 ---
-sol = sp.integrate.solve_ivp(turbie.ydot, t_span, y0, t_eval=t_eval, args=(M, C, K, u_of_t, rho_CT_A))
-
-# --- 繪圖 ---
-t = sol.t
-x1 = sol.y[0]
-x2 = sol.y[1]
-
-plt.figure(figsize=(8,4))
-plt.plot(t, x1, label="Blade deflection (x1)")
-plt.plot(t, x2, label="Tower deflection (x2)")
-plt.xlabel("Time [s]")
-plt.ylabel("Displacement [m]")
-plt.title("Turbie dynamic response under constant wind (u = 8 m/s)")
-plt.legend()
-plt.grid(True)
-plt.tight_layout()
-plt.show()"""
+# passing statistic df, TI_cate, color_value_set and plot output path for plotting
+turbie.plot_all_TI(df_all_statistic, TI_categories, colors, plot_dir)
