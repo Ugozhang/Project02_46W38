@@ -221,13 +221,19 @@ def plot_each_TI(df_all_statistic, TI_categories, plot_dir):
         plt.close("all")
         print(f"✅ Plots saved for TI={TI_val:.2f}")
 
-def plot_all_TI(df_all_statistic, TI_categories, colors, plot_dir):
+def plot_all_TI(df_all_statistic, CT_table, TI_categories, colors, plot_dir):
     """
     Scanning each TI_categories by loop, assign sorted data into subset. 
     Plot each subset onto axis objects in loop; then, set figure object after all subsets were plotting onto axis.
     """
     # Create fig with 2 subplots
-    fig, (ax_mean, ax_std) = plt.subplots(2, 1, figsize=(7, 8), sharex=True)
+    fig, (ax_CT, ax_mean, ax_std) = plt.subplots(3, 1, figsize=(7, 12), sharex=True)
+
+    ax_CT.plot(CT_table["V"], CT_table["CT"], label="CT")
+    ax_CT.set_ylabel("CT")
+    ax_CT.set_title("CT under each Wind Speeds")
+    ax_CT.grid(True)
+    ax_CT.legend(ncol=2, fontsize=8)
 
     for TI_val, color in zip(TI_categories, colors):
         subset = df_all_statistic[df_all_statistic["TI"] == TI_val].sort_values("U_mean")

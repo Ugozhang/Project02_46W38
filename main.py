@@ -144,4 +144,4 @@ colors = cmap(np.linspace(0.15, 0.85, len(TI_categories)))
 turbie.plot_each_TI(df_all_statistic, TI_categories, plot_dir)
 
 # passing statistic df, TI_cate, color_value_set and plot output path for plotting
-turbie.plot_all_TI(df_all_statistic, TI_categories, colors, plot_dir)
+turbie.plot_all_TI(df_all_statistic, CT_table, TI_categories, colors, plot_dir)
